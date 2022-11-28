@@ -1,5 +1,5 @@
 """"
-Copyright © Krypton 2022 - https://github.com/kuroakumanoir
+Copyright © Kuroakumanoir 2022 - https://github.com/kuroakumanoir
 Description:
 This is a template to create your own discord bot in python.
 
