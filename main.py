@@ -151,7 +151,3 @@ async def on_command_error(context: Context, error) -> None:
 
 
 bot.run(config["token"])
-
-
-
-
