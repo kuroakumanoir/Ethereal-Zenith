@@ -80,10 +80,10 @@ class EtherealZenith(commands.Bot):
             self.synced = True
 
     async def on_ready(self):
-        print(f"Logged in as {self.bot.user.name}")
-        print(f"discord.py API version: {self.discord.__version__}")
-        print(f"Python version: {self.platform.python_version()}")
-        print(f"Running on: {self.platform.system()} {self.platform.release()} ({self.os.name})")  
+        print(f"Logged in as {self.user.name}")
+        print(f"discord.py API version: {discord.__version__}")
+        print(f"Python Version: {sys.version}")
+        print(f"Running on: {platform.system()} {platform.release()} ({os.name})")  
 
     async def close(self) -> None:
         await super().close()
