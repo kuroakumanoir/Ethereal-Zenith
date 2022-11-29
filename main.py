@@ -11,17 +11,35 @@ Version: 1.0.0
 import asyncio
 import json
 import os
+import re
 import platform
 import random
 import sys
 from contextlib import closing
 
 import discord
+import logging
+import logging.handlers
 from discord import Interaction
 from discord.ext import commands, tasks
 from discord.ext.commands import Bot, Context
 
 import exceptions
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+logging.getLogger('discord.http').setLevel(logging.INFO)
+
+handler = logging.handlers.RotatingFileHandler(
+    filename='discord.log',
+    encoding='utf-8',
+    maxBytes=32 * 1024 * 1024,  # 32 MiB
+    backupCount=5,  # Rotate through 5 files
+)
+dt_fmt = '%Y-%m-%d %H:%M:%S'
+formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 """ Calling your configuration file"""
 
@@ -44,9 +62,6 @@ bot.config = config
 
 @bot.event
 async def on_ready() -> None:
-    """
-    The code in this even is executed when the bot is ready
-    """
     print(f"Logged in as {bot.user.name}")
     print(f"discord.py API version: {discord.__version__}")
     print(f"Python version: {platform.python_version()}")
@@ -57,9 +72,6 @@ async def on_ready() -> None:
 
 @tasks.loop(minutes=1.0)
 async def status_task() -> None:
-    """
-    Setup the game status task of the bot
-    """
     statuses = ["Watching discord!", "Playing with humans!", "This place is sus!"]
     await bot.change_presence(activity=discord.Game(random.choice(statuses)))
 
@@ -151,3 +163,6 @@ async def on_command_error(context: Context, error) -> None:
 
 
 bot.run(config["token"])
+
+
+#A section of this code is inspired by, Krypton 2022 - https://github.com/kkrypt0nn (https://krypton.ninja), Be sure to check out his repo too.
