@@ -7,24 +7,29 @@ Version: 1.0.0
 """
 
 #The following code follows PEP8 (mostly)
-
 import asyncio
+import errors
+import chunk
+import datetime
+import io
 import json
-import os
-import re
-import platform
-import random
-import sys
-from contextlib import closing
-
-import discord
 import logging
 import logging.handlers
-from discord import Interaction
-from discord.ext import commands, tasks
-from discord.ext.commands import Bot, Context
-
-import exceptions
+import os
+import re
+import traceback
+import platform
+import sys
+import aiohttp
+import discord
+import jishaku
+from discord.ext import commands
+from discord.ext.commands.errors import (
+    ExtensionAlreadyLoaded,
+    ExtensionFailed,
+    ExtensionNotFound,
+    NoEntryPointError
+)
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -41,100 +46,53 @@ formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', 
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-""" Calling your configuration file"""
 
-if not os.path.isfile("config.json"):
-    sys.exit("'config.json' not found! Please add it and try again.")
-else:
-    with open("config.json") as file:
-        config = json.load(file)
-				
-"""
-Now we will load the intents,
-You Should First read the discord.py document to understand about intents first
-"""
-intents = discord.Intents.default()
+class Bot(commands.Bot):
+    def _init_(self, *args, **kwargs):
+         super ()._init_(*args, **kwargs)
 
-bot = Bot(command_prefix=commands.when_mentioned_or(
-    config["prefix"]), intents=intents, help_command=None)
+    async def on_error(self, error): 
+        traceback.print_exc()
 
-bot.config = config
+class EtherealZenith(commands.Bot):
+    def __init__(self) -> None:
+        super().__init__(
+            command_prefix =commands.when_mentioned_or(">>"),
+            intents = discord.Intents.all(),
+            case_insensitive=True,
+            application_id = ,  # Your application id here
+            chunk_guilds_at_startup=False,
+            strip_after_prefix=True)
+        self.synced = False
+        self.session: aiohttp.ClientSession = None
 
-@bot.event
-async def on_ready() -> None:
-    print(f"Logged in as {bot.user.name}")
-    print(f"discord.py API version: {discord.__version__}")
-    print(f"Python version: {platform.python_version()}")
-    print(f"Running on: {platform.system()} {platform.release()} ({os.name})")
-    print("-------------------")
-    status_task.start()
+    async def create_session(self):
+        self.session = aiohttp.ClientSession()
 
+    async def setup_hook(self):
+        await self.load_extension("jishaku")
+        for filename in os.listdir('./cogs'):
+            if filename.endswith('.py'):
+                await self.load_extension(f'cogs.{filename[:-3]}')
+        if not self.synced:
+            #await bot.tree.sync()
+            await bot.tree.sync()
+            self.synced = True
 
-@tasks.loop(minutes=1.0)
-async def status_task() -> None:
-    statuses = ["Watching discord!", "Playing with humans!", "This place is sus!"]
-    await bot.change_presence(activity=discord.Game(random.choice(statuses)))
+    async def on_ready(self):
+        print(f"Logged in as {self.bot.user.name}")
+        print(f"discord.py API version: {self.discord.__version__}")
+        print(f"Python version: {self.platform.python_version()}")
+        print(f"Running on: {self.platform.system()} {self.platform.release()} ({self.os.name})")  
 
+    async def close(self) -> None:
+        await super().close()
 
+if __name__ == "__main__":
+    bot = EtherealZenith()
+    TOKEN = ('') # Your Bot Token here
+    bot.run(TOKEN, reconnect=True, log_handler=None)
 
-@bot.event
-async def on_command_error(context: Context, error) -> None:
-    """
-    The code in this event is executed every time a normal valid command catches an error
-    :param context: The context of the normal command that failed executing.
-    :param error: The error that has been faced.
-    """
-    if isinstance(error, commands.CommandOnCooldown):
-        minutes, seconds = divmod(error.retry_after, 60)
-        hours, minutes = divmod(minutes, 60)
-        hours = hours % 24
-        embed = discord.Embed(
-            title="Hey, please slow down!",
-            description=f"You can use this command again in {f'{round(hours)} hours' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} seconds' if round(seconds) > 0 else ''}.",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    elif isinstance(error, exceptions.UserBlacklisted):
-        """
-        The code here will only execute if the error is an instance of 'UserBlacklisted', which can occur when using
-        the @checks.not_blacklisted() check in your command, or you can raise the error by yourself.
-        """
-        embed = discord.Embed(
-            title="Error!",
-            description="You are blacklisted from using the bot.",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    elif isinstance(error, exceptions.UserNotOwner):
-        """
-        Same as above, just for the @checks.is_owner() check.
-        """
-        embed = discord.Embed(
-            title="Error!",
-            description="You are not the owner of the bot!",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    elif isinstance(error, commands.MissingPermissions):
-        embed = discord.Embed(
-            title="Error!",
-            description="You are missing the permission(s) `" + ", ".join(
-                error.missing_permissions) + "` to execute this command!",
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    elif isinstance(error, commands.MissingRequiredArgument):
-        embed = discord.Embed(
-            title="Error!",
-            # We need to capitalize because the command arguments have no capital letter in the code.
-            description=str(error).capitalize(),
-            color=0xE02B2B
-        )
-        await context.send(embed=embed)
-    raise error
-
-
-bot.run(config["token"])
 
 
 #A section of this code is inspired by, Krypton 2022 - https://github.com/kkrypt0nn (https://krypton.ninja), Be sure to check out his repo too.
